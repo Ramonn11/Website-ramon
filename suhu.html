@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temperature Detection System</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary-color: #ff69b4;
+            --secondary-color: #ffb6c1;
+            --dark-pink: #db7093;
+            --light-pink: #ffc0cb;
+            --text-color: #333;
+            --white: #fff;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--light-pink);
+            color: var(--text-color);
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: var(--white);
+            padding: 20px 0;
+            text-align: center;
+            border-radius: 0 0 20px 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 2.2em;
+        }
+
+        .app-description {
+            font-size: 1.1em;
+            margin-top: 10px;
+        }
+
+        .main-content {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            margin-top: 30px;
+        }
+
+        .temperature-section {
+            flex: 1;
+            min-width: 300px;
+            background-color: var(--white);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .chart-section {
+            flex: 1;
+            min-width: 300px;
+            background-color: var(--white);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            height: 400px;
+        }
+
+        .temperature-display {
+            font-size: 4em;
+            text-align: center;
+            margin: 20px 0;
+            color: var(--primary-color);
+            font-weight: bold;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 25px 0;
+        }
+
+        button {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .primary-btn {
+            background-color: var(--primary-color);
+            color: var(--white);
+        }
+
+        .secondary-btn {
+            background-color: var(--secondary-color);
+            color: var(--text-color);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .alert-box {
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: bold;
+            display: none;
+        }
+
+        .high-temp {
+            background-color: #ff6b6b;
+            color: var(--white);
+        }
+
+        .normal-temp {
+            background-color: #7bed9f;
+            color: var(--text-color);
+        }
+
+        .history-section {
+            margin-top: 30px;
+            background-color: var(--white);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--secondary-color);
+        }
+
+        th {
+            background-color: var(--primary-color);
+            color: var(--white);
+        }
+
+        tr:nth-child(even) {
+            background-color: var(--light-pink);
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                flex-direction: column;
+            }
+            
+            .temperature-section, .chart-section {
+                flex: none;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Temperature Detection System</h1>
+            <p class="app-description">Monitor and analyze temperature in real-time</p>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="main-content">
+            <section class="temperature-section">
+                <h2>Current Temperature</h2>
+                <div class="temperature-display" id="currentTemp">--°C</div>
+                
+                <div class="alert-box" id="tempAlert"></div>
+                
+                <div class="controls">
+                    <button class="primary-btn" id="refreshBtn">Refresh</button>
+                    <button class="secondary-btn" id="saveBtn">Save</button>
+                    <button class="secondary-btn" id="deleteBtn">Delete History</button>
+                </div>
+                
+                <div class="manual-input">
+                    <label for="manualTemp">Or enter temperature manually (°C):</label>
+                    <input type="number" id="manualTemp" step="0.1" style="width: 100%; padding: 10px; margin: 10px 0; border-radius: 5px; border: 1px solid var(--secondary-color);">
+                    <button class="primary-btn" id="manualSubmit" style="width: 100%;">Submit</button>
+                </div>
+            </section>
+
+            <section class="chart-section">
+                <h2>Temperature History</h2>
+                <canvas id="tempChart"></canvas>
+            </section>
+        </div>
+
+        <section class="history-section">
+            <h2>Saved Temperature Data</h2>
+            <table id="tempTable">
+                <thead>
+                    <tr>
+                        <th>Date & Time</th>
+                        <th>Temperature (°C)</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="tempTableBody">
+                    <!-- Data will be inserted here -->
+                </tbody>
+            </table>
+        </section>
+    </div>
+
+    <script>
+        // Initialize variables
+        let temperatureHistory = [];
+        const thresholdHigh = 38; // High temperature threshold
+        const thresholdLow = 15;  // Low temperature threshold (not used in current logic)
+
+        // DOM Elements
+        const currentTempElement = document.getElementById('currentTemp');
+        const tempAlertElement = document.getElementById('tempAlert');
+        const refreshBtn = document.getElementById('refreshBtn');
+        const saveBtn = document.getElementById('saveBtn');
+        const deleteBtn = document.getElementById('deleteBtn');
+        const manualTempInput = document.getElementById('manualTemp');
+        const manualSubmitBtn = document.getElementById('manualSubmit');
+        const tempTableBody = document.getElementById('tempTableBody');
+        let tempChart;
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', () => {
+            // Load saved data from localStorage
+            loadSavedData();
+            
+            // Initialize chart
+            initChart();
+            
+            // Get initial temperature reading
+            getTemperature();
+            
+            // Set up event listeners
+            setupEventListeners();
+        });
+
+        function loadSavedData() {
+            const savedData = localStorage.getItem('temperatureData');
+            if (savedData) {
+                temperatureHistory = JSON.parse(savedData);
+                updateHistoryTable();
+            }
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('tempChart').getContext('2d');
+            
+            tempChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Temperature (°C)',
+                        data: [],
+                        backgroundColor: 'rgba(255, 105, 180, 0.2)',
+                        borderColor: 'rgba(255, 105, 180, 1)',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: false
+                        }
+                    }
+                }
+            });
+        }
+
+        function setupEventListeners() {
+            // Refresh temperature
+            refreshBtn.addEventListener('click', getTemperature);
+            
+            // Save current temperature
+            saveBtn.addEventListener('click', saveTemperature);
+            
+            // Delete history
+            deleteBtn.addEventListener('click', deleteHistory);
+            
+            // Manual temperature input
+            manualSubmitBtn.addEventListener('click', () => {
+                const manualTemp = parseFloat(manualTempInput.value);
+                if (!isNaN(manualTemp)) {
+                    updateTemperatureDisplay(manualTemp);
+                } else {
+                    alert('Please enter a valid temperature');
+                }
+            });
+        }
+
+        function getTemperature() {
+            // In a real application, this would fetch from a sensor API
+            // For demo purposes, we'll simulate random temperature between 10°C and 45°C
+            const simulatedTemp = Math.round((Math.random() * 35 + 10) * 10) / 10;
+            
+            updateTemperatureDisplay(simulatedTemp);
+        }
+
+        function updateTemperatureDisplay(temperature) {
+            // Update display
+            currentTempElement.textContent = `${temperature}°C`;
+            
+            // Check temperature status
+            checkTemperatureStatus(temperature);
+            
+            // Add to history for chart
+            addToHistory(temperature);
+        }
+
+        function checkTemperatureStatus(temperature) {
+            tempAlertElement.style.display = 'block';
+            
+            if (temperature > thresholdHigh) {
+                tempAlertElement.textContent = 'Warning: Temperature too high!';
+                tempAlertElement.className = 'alert-box high-temp';
+            } else {
+                tempAlertElement.textContent = 'Temperature is normal';
+                tempAlertElement.className = 'alert-box normal-temp';
+            }
+        }
+
+        function addToHistory(temperature) {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString();
+            const dateString = now.toLocaleDateString();
+            
+            // Add to in-memory history
+            temperatureHistory.unshift({
+                temperature,
+                timestamp: now.getTime(),
+                date: `${dateString} ${timeString}`,
+                status: temperature > thresholdHigh ? 'High' : 'Normal'
+            });
+            
+            // Keep only the last 100 readings for the chart
+            if (temperatureHistory.length > 100) {
+                temperatureHistory.pop();
+            }
+            
+            // Update chart
+            updateChart();
+        }
+
+        function updateChart() {
+            // Get last 20 readings for the chart
+            const chartData = temperatureHistory.slice(0, 20).reverse();
+            
+            tempChart.data.labels = chartData.map(item => {
+                const date = new Date(item.timestamp);
+                return date.toLocaleTimeString();
+            });
+            
+            tempChart.data.datasets[0].data = chartData.map(item => item.temperature);
+            tempChart.update();
+        }
+
+        function saveTemperature() {
+            // Save to localStorage
+            localStorage.setItem('temperatureData', JSON.stringify(temperatureHistory));
+            
+            // Update history table
+            updateHistoryTable();
+            
+            alert('Temperature data saved successfully!');
+        }
+
+        function updateHistoryTable() {
+            tempTableBody.innerHTML = '';
+            
+            temperatureHistory.slice(0, 50).forEach(item => {
+                const row = document.createElement('tr');
+                
+                const dateCell = document.createElement('td');
+                dateCell.textContent = item.date;
+                
+                const tempCell = document.createElement('td');
+                tempCell.textContent = item.temperature;
+                
+                const statusCell = document.createElement('td');
+                statusCell.textContent = item.status;
+                statusCell.className = item.status === 'High' ? 'high-temp' : 'normal-temp';
+                
+                row.appendChild(dateCell);
+                row.appendChild(tempCell);
+                row.appendChild(statusCell);
+                
+                tempTableBody.appendChild(row);
+            });
+        }
+
+        function deleteHistory() {
+            if (confirm('Are you sure you want to delete all saved temperature data?')) {
+                localStorage.removeItem('temperatureData');
+                temperatureHistory = [];
+                updateHistoryTable();
+                tempChart.data.labels = [];
+                tempChart.data.datasets[0].data = [];
+                tempChart.update();
+                alert('All temperature history has been deleted.');
+            }
+        }
+    </script>
+</body>
+</html>
